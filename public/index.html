@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DB Agent</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" aria-label="Chats">
+      <div class="sidebar-head">
+        <div class="brand">
+          <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7.5" ry="3" /><path d="M4.5 5.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6M4.5 11.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6" /></svg>
+          <span>DB Agent</span>
+        </div>
+        <button class="icon-btn only-mobile" id="closeSidebar" title="Close sidebar" aria-label="Close sidebar">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+
+      <button class="new-chat" id="newChat">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        New chat
+      </button>
+
+      <div class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
+        <input id="search" type="search" placeholder="Search chats" aria-label="Search chats">
+      </div>
+
+      <nav class="chat-list" id="chatList"></nav>
+
+      <div class="conn" id="conn">
+        <div class="conn-row">
+          <span class="dot" id="connDot"></span>
+          <span class="conn-title" id="connTitle">Connecting…</span>
+        </div>
+        <div class="conn-detail" id="connDetail"></div>
+        <div class="conn-actions">
+          <button class="retry" id="openConnection">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
+            Connection settings
+          </button>
+          <button class="retry" id="retry" hidden title="Reconnect using the saved settings">Retry</button>
+        </div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn only-mobile" id="openSidebar" title="Open sidebar" aria-label="Open sidebar">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+        <h1 class="chat-title" id="chatTitle">New chat</h1>
+        <span class="badge" id="modelBadge" title="AI model"></span>
+      </header>
+
+      <div class="banner" id="banner" hidden></div>
+
+      <section class="messages" id="messages" aria-live="polite">
+        <div class="empty" id="empty">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7.5" ry="3" /><path d="M4.5 5.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6M4.5 11.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6" /></svg>
+          </div>
+          <h2>What would you like to know about your data?</h2>
+          <p class="muted" id="emptyDb"></p>
+          <div class="suggestions">
+            <button class="suggestion">What tables are in this database, and which are the largest?</button>
+            <button class="suggestion">Describe the most important tables and how they relate.</button>
+            <button class="suggestion">Which tables have no primary key?</button>
+            <button class="suggestion">Show row counts for the top 10 tables.</button>
+          </div>
+        </div>
+        <div class="thread" id="thread"></div>
+      </section>
+
+      <form class="composer" id="composer">
+        <div class="composer-box">
+          <textarea id="input" rows="1" placeholder="Ask about your data…" aria-label="Message"></textarea>
+          <button type="submit" class="send" id="send" title="Send (Enter)" aria-label="Send">
+            <svg class="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+            <svg class="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" /></svg>
+          </button>
+        </div>
+        <p class="hint" id="hint">Read-only · Enter to send, Shift+Enter for a new line</p>
+      </form>
+    </main>
+  </div>
+
+  <!-- Connection dialog -->
+  <dialog class="dialog" id="connDialog" aria-labelledby="connDialogTitle">
+    <form id="connForm" novalidate>
+      <header class="dialog-head">
+        <div>
+          <h2 id="connDialogTitle">Database connection</h2>
+          <p class="muted">SQL Server · SQL Server authentication</p>
+        </div>
+        <button type="button" class="icon-btn" id="connClose" aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+
+      <div class="dialog-body">
+        <details class="paste">
+          <summary>Paste a connection string instead</summary>
+          <textarea id="pasteInput" rows="3" placeholder="Server=localhost,1433;Database=Sales;User Id=reader;Password=…;Encrypt=True;TrustServerCertificate=True"></textarea>
+          <div class="paste-row">
+            <span class="muted small">ADO.NET, ODBC and JDBC formats are recognised.</span>
+            <button type="button" class="btn" id="pasteApply">Fill fields</button>
+          </div>
+        </details>
+
+        <div class="form-grid">
+          <label class="field span-3">
+            <span>Server</span>
+            <input id="f-server" autocomplete="off" spellcheck="false" placeholder="localhost or host\INSTANCE">
+          </label>
+          <label class="field">
+            <span>Port</span>
+            <input id="f-port" type="number" min="1" max="65535" placeholder="1433">
+          </label>
+
+          <label class="field span-2">
+            <span>Login</span>
+            <input id="f-user" autocomplete="off" spellcheck="false" placeholder="db_agent_reader">
+          </label>
+          <label class="field span-2">
+            <span>Password</span>
+            <div class="with-btn">
+              <input id="f-password" type="password" autocomplete="new-password">
+              <button type="button" class="mini-btn" id="togglePassword" aria-label="Show password">Show</button>
+            </div>
+          </label>
+
+          <label class="field span-4">
+            <span>Database</span>
+            <div class="with-btn">
+              <input id="f-database" list="dbList" autocomplete="off" spellcheck="false" placeholder="Test the connection to pick from a list">
+              <button type="button" class="mini-btn" id="loadDatabases">Load list</button>
+            </div>
+            <datalist id="dbList"></datalist>
+          </label>
+        </div>
+
+        <fieldset class="options">
+          <legend>Options</legend>
+          <label class="check"><input type="checkbox" id="f-encrypt"> <span>Encrypt connection</span></label>
+          <label class="check"><input type="checkbox" id="f-trust"> <span>Trust server certificate <em class="muted">(self-signed / local servers)</em></span></label>
+          <label class="check"><input type="checkbox" id="f-readonly"> <span>Read-only application intent <em class="muted">(route to AG secondary)</em></span></label>
+        </fieldset>
+
+        <details class="advanced">
+          <summary>Agent limits</summary>
+          <div class="form-grid">
+            <label class="field span-2">
+              <span>Query timeout (ms)</span>
+              <input id="f-timeout" type="number" min="1000" max="600000" step="1000">
+            </label>
+            <label class="field span-2">
+              <span>Max rows per query</span>
+              <input id="f-maxrows" type="number" min="1" max="10000">
+            </label>
+          </div>
+        </details>
+
+        <section class="connstr">
+          <div class="connstr-head">
+            <span class="connstr-title">Connection string</span>
+            <div class="seg" role="tablist" aria-label="Connection string format">
+              <button type="button" role="tab" data-format="adonet" class="active">ADO.NET</button>
+              <button type="button" role="tab" data-format="odbc">ODBC</button>
+              <button type="button" role="tab" data-format="jdbc">JDBC</button>
+            </div>
+          </div>
+          <pre id="connString" class="connstr-box"></pre>
+          <div class="connstr-actions">
+            <label class="check small"><input type="checkbox" id="revealInString"> <span>Show password</span></label>
+            <button type="button" class="btn" id="copyConnString">Copy</button>
+          </div>
+        </section>
+
+        <div class="test-result" id="testResult" hidden></div>
+      </div>
+
+      <footer class="dialog-foot">
+        <button type="button" class="btn" id="testConnection">Test connection</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="connCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="saveConnection">Save &amp; connect</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script src="/vendor/marked.js"></script>
+  <script src="/vendor/purify.js"></script>
+  <script src="/app.js"></script>
+  <script src="/connection.js"></script>
+</body>
+</html>
