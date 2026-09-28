@@ -415,8 +415,9 @@ export async function startServer(options: ServerOptions = {}): Promise<http.Ser
   opts = {
     host: options.host ?? (process.env.HOST || "127.0.0.1"),
     port: options.port ?? Number(process.env.PORT || 3000),
-    dataDir: options.dataDir ?? path.join(ROOT, "data"),
-    envFile: options.envFile === undefined ? path.join(ROOT, ".env") : options.envFile,
+    // Vercel's filesystem is read-only except /tmp, and settings come from its env vars.
+    dataDir: options.dataDir ?? (process.env.VERCEL ? "/tmp/db-agent" : path.join(ROOT, "data")),
+    envFile: options.envFile === undefined ? (process.env.VERCEL ? null : path.join(ROOT, ".env")) : options.envFile,
     createDb: options.createDb ?? ((settings) => new MssqlAdapter(settings.db)),
   };
   store = new ChatStore(path.join(opts.dataDir, "chats"));
