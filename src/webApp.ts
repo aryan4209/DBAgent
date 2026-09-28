@@ -411,7 +411,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   sendJson(res, 404, { error: "Not found" });
 }
 
-export async function startServer(options: ServerOptions = {}): Promise<http.Server> {
+async function init(options: ServerOptions): Promise<void> {
   opts = {
     host: options.host ?? (process.env.HOST || "127.0.0.1"),
     port: options.port ?? Number(process.env.PORT || 3000),
@@ -422,14 +422,28 @@ export async function startServer(options: ServerOptions = {}): Promise<http.Ser
   };
   store = new ChatStore(path.join(opts.dataDir, "chats"));
   await store.init();
+}
 
-  const server = http.createServer((req, res) => {
-    handle(req, res).catch((err) => {
-      console.error(err);
-      if (!res.headersSent) sendJson(res, 500, { error: err instanceof Error ? err.message : "Server error" });
-      else res.end();
-    });
+function onRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  return handle(req, res).catch((err) => {
+    console.error(err);
+    if (!res.headersSent) sendJson(res, 500, { error: err instanceof Error ? err.message : "Server error" });
+    else res.end();
   });
+}
+
+let serverlessInit: Promise<void> | null = null;
+
+/** Request handler for serverless hosts (Vercel), which call it per request instead of listening. */
+export async function serverlessHandler(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  serverlessInit ??= init({});
+  await serverlessInit;
+  await onRequest(req, res);
+}
+
+export async function startServer(options: ServerOptions = {}): Promise<http.Server> {
+  await init(options);
+  const server = http.createServer(onRequest);
 
   await new Promise<void>((resolve) => server.listen(opts.port, opts.host, resolve));
   console.log(`DB Agent UI running at http://${opts.host === "0.0.0.0" ? "localhost" : opts.host}:${opts.port}`);
