@@ -316,8 +316,13 @@
     try {
       const r = await api("/api/connection", { method: "PUT", body: JSON.stringify(values()) });
       if (!r.ok) return showResult("bad", "Not saved: connection failed", [r.error]);
-      d.dialog.close();
       loadStatus();
+      if (r.persisted === false) {
+        return showResult("ok", "Connected, but not saved", [
+          { className: "warn", text: "This server can't write a .env file, so these settings last only until it restarts. To keep them, set the MSSQL_* environment variables in your hosting settings (e.g. Vercel → Settings → Environment Variables)." },
+        ]);
+      }
+      d.dialog.close();
     } catch (err) {
       showResult("bad", "Not saved", [err.message]);
     } finally {
@@ -343,7 +348,7 @@
     d.password.placeholder = hasSavedPassword ? "Saved (leave blank to keep)" : "";
     d.reveal.checked = false;
     d.result.hidden = true;
-    d.save.title = current.canSave ? "" : "Saving is disabled on this server";
+    d.save.title = current.canSave ? "" : "Settings apply until the server restarts; they can't be saved to .env here";
     for (const input of d.form.querySelectorAll(".invalid")) input.classList.remove("invalid");
     renderConnString();
     d.dialog.showModal();

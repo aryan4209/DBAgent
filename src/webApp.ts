@@ -187,7 +187,6 @@ async function handleConnection(pathname: string, req: http.IncomingMessage, res
   }
 
   // Save & connect: only write .env once the settings are proven to work.
-  if (!opts.envFile) return sendJson(res, 400, { error: "Saving is disabled: no .env file configured." });
   if (!input.database) return sendJson(res, 400, { error: "Choose a database before saving." });
   try {
     await testConnection(settings);
@@ -206,13 +205,23 @@ async function handleConnection(pathname: string, req: http.IncomingMessage, res
     AGENT_MAX_ROWS: String(input.maxRows),
   };
   if (input.password) values.MSSQL_PASSWORD = input.password;
-  try {
-    writeEnvValues(opts.envFile, values);
-  } catch (err) {
-    return sendJson(res, 400, { error: err instanceof Error ? err.message : String(err) });
+  if (opts.envFile) {
+    try {
+      writeEnvValues(opts.envFile, values);
+    } catch (err) {
+      return sendJson(res, 400, { error: err instanceof Error ? err.message : String(err) });
+    }
+  } else {
+    // No writable .env (e.g. Vercel): apply to this running instance only.
+    Object.assign(process.env, values);
   }
   await reconnect();
-  return sendJson(res, 200, { ok: ready !== null, error: ready ? null : lastError, status: statusPayload() });
+  return sendJson(res, 200, {
+    ok: ready !== null,
+    error: ready ? null : lastError,
+    persisted: Boolean(opts.envFile),
+    status: statusPayload(),
+  });
 }
 
 function statusPayload() {
